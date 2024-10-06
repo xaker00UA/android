@@ -1,6 +1,6 @@
 import json
 from flet import *
-
+from app.utils import timer
 from app.database import All_General
 from .page1 import Up, Middle, Down, Event
 from app import ClanInterface, Clan
@@ -12,14 +12,9 @@ class Up_clan(Up):
     def __init__(self, page, event):
         super().__init__(page=page, event=event)
         self.text.label = "tag"
-        # self.controls = [
-        #     Row([Column([self.theme, self.menu]), self.search, self.session]),
-        #     self.text,
-        # ]
-        # self.vertical_alignment = CrossAxisAlignment.START
-        # self.height = 80
         self.session.on_click = self.start_session
 
+    @timer
     def start_session(self, e):
         if self.text.value:
             asyncio.run(ClanInterface(name=self.text.value).reset())
@@ -31,10 +26,14 @@ class Up_clan(Up):
 
     def drop_list(self, n):
         self.drop.options.clear()
-        self.drop.options = [
+        self.second_drop.options.clear()
+        self.data: list = [
             dropdown.Option(text=i.get("data"))
             for i in All_General().get_clan(clan_id=n)
         ]
+        self.drop.options = self.data.copy()
+        self.second_drop.options = self.data.copy()
+        self.second_drop.options.append(dropdown.Option(text="Сейчас"))
         self.update()
 
     def handler(self):
@@ -50,17 +49,25 @@ class Middle_clan(Middle):
         super().__init__(page=page, event=event)
 
     def crate_player(self, name):
-        self.player = ClanInterface(clan_tag=name)
+        self.player: ClanInterface = ClanInterface(clan_tag=name)
 
-    def build_content(self, name, trigger: str = None):
-        super().build_content(name, trigger)
+    def build_content(self, trigger: str = None, two_trigger: str = None):
+        super().build_content(trigger, two_trigger)
         if hasattr(self, "table"):
             self.text.value = self.text.value.replace("игрока", "клана")
             self.text.update()
 
-    def change_update(self, e):
-        if hasattr(self, "player"):
-            self.build_content(name=self.player.clan_tag)
+    # def change_update(self, e):
+    #     if hasattr(self, "player"):
+    #         self.build_content(name=self.player.clan_tag)
+
+    # def period(self, period):
+    #     self.build_content(trigger=period)
+
+    # def two_period(self, period: tuple):
+    #     self.build_content(
+    #         name=self.player.clan_tag, trigger=period[0], two_trigger=period[1]
+    #     )
 
 
 class Down_clan(Down):
