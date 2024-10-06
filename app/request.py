@@ -2,7 +2,7 @@ import asyncio
 from aiohttp import ClientSession, TCPConnector
 from asyncio import Semaphore, Queue
 from datetime import datetime
-from config import LIMITED, APPLICATION_ID
+from config import LIMITED, APPLICATION_ID, FORMAT_DATE
 from Error.error_name import ConnectionError, Not_Found_Player
 
 
@@ -92,7 +92,7 @@ class Request_player:
         return {
             "nickname": self.__name,
             "id": self.__user_id,
-            "data": datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
+            "data": datetime.now().strftime(FORMAT_DATE),
             "all": data.get("data").get(str(self.__user_id)),
         }
 
@@ -142,9 +142,7 @@ class Request_clan:
                 self.__clan_tag = clan.get("tag")
                 break
 
-    async def clan(
-        self,
-    ):
+    async def clan(self):
         params = []
 
         async def run(sem, task):
@@ -168,7 +166,7 @@ class Request_clan:
             "tag": self.__clan_tag,
             "name": self.__clan_name,
             "clan_id": self.__clan_id,
-            "data": datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
+            "data": datetime.now().strftime(FORMAT_DATE),
             "players": params,
         }
 

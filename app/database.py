@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 from logging import getLogger
 import logging
-from config import DATABASE
+from config import DATABASE, FORMAT_DATE
 
 logger = getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -9,7 +9,7 @@ handler = logging.FileHandler(f"log\\{__name__}.log", encoding="utf-8")
 handler.setFormatter(
     logging.Formatter(
         "[%(asctime)s] [%(levelname)s] [%(name)s]-%(message)s",
-        datefmt="%d-%m-%Y %H:%M:%S",
+        datefmt=FORMAT_DATE,
     )
 )
 logger.addHandler(handler)

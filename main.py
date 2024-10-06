@@ -2,6 +2,7 @@ from app.utils import timer
 import logging
 from flet import *
 from templates import *
+from config import FORMAT_DATE
 
 logger = logging.getLogger()
 filename = f"log\\{logger.name}.log"
@@ -10,7 +11,7 @@ handler.setLevel(logging.INFO)
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] [%(levelname)s] [%(name)s]-%(message)s",
-    datefmt="%d-%m-%Y %H:%M:%S",
+    datefmt=FORMAT_DATE,
     handlers=[handler],
 )
 

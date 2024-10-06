@@ -1,10 +1,13 @@
 import asyncio
-import json
+from datetime import datetime
 from typing import Callable
 from flet import *
 from app import All_General, PlayerInterface, User
-from config import PLAYERS,SESSION
+from config import PLAYERS,SESSION,FORMAT_DATE
 from app.utils import timer
+
+
+
 class Event:
     def __init__(self) -> None:
         self._listener: dict[str, list[Callable]] = {}
@@ -27,7 +30,7 @@ class Up(Row):
         self.text = TextField(
             label="nickname", on_submit=self.on_click_search
         )
-        self.page = page
+        self.page:Page = page
         self.theme = IconButton(icon="SUNNY", on_click=self.change_theme)
         self.search = ElevatedButton(
             icon="search", text="Найти", on_click=self.on_click_search
@@ -36,15 +39,16 @@ class Up(Row):
             icon="update", text="Начать сессию", on_click=self.start_session
         )
         self.drop = Dropdown(on_change=self.drop_change)
+        self.second_drop = Dropdown(on_change=self.drop_second_change)
         self.menu = PopupMenuButton()
         self.controls = [
             Column(
-                [Row([self.theme, self.search, self.session]), self.menu, self.drop]
+                [Row([self.theme, self.search, self.session]), self.menu,Row([self.drop, self.second_drop])]
             ),
             self.text,
         ]
         self.handler()
-
+    @timer
     def start_session(self, e):
         if self.text.value:
             self.handlers.emit("pause")
@@ -63,25 +67,48 @@ class Up(Row):
             self.add_menu(self.text.value)
             self.text.value = ""
             self.update()
+    def two_period(self, value_old, value_new):
+        if value_new == "Сейчас":
+            self.handlers.emit("period",data=value_old)
+        else:
+            self.handlers.emit("two_period",data=(value_old,value_new))
+
+        
+        
+        
+
+    def drop_second_change(self, e):
+        value=e.control.value
+        if self.drop.value:
+            self.two_period(value_new=value,value_old=self.drop.value)
+
+        
+
 
     def drop_change(self, e):
-        self.handlers.emit("period", data=e.control.value)
+        value=e.control.value
+        self.second_drop.options=[option for option in self.data.copy() if datetime.strptime(option.text,FORMAT_DATE)>datetime.strptime(value,FORMAT_DATE)]
+        self.second_drop.options.append(dropdown.Option(text="Сейчас"))
+        self.second_drop.update()
+     
+        
+        
 
     def on_click_menu(self, e):
         self.handlers.emit(f"text_button", data=e.control.text)
         self.drop_list(e.control.text)
 
-    def add_menu(self, n):
+    def add_menu(self, n): 
         for item in self.menu.items:
             if item.text == n:
                 return
         self.menu.items.append(PopupMenuItem(text=n, on_click=self.on_click_menu))
 
     def drop_list(self, n):
-        self.drop.options.clear()
-        self.drop.options = [
-            dropdown.Option(text=i.get("data")) for i in All_General().get(name=n)
-        ]
+        self.data:list = [dropdown.Option(text=i.get("data")) for i in All_General().get(name=n)]
+        self.drop.options = self.data.copy()
+        self.second_drop.options=self.data.copy()
+        self.second_drop.options.append(dropdown.Option(text="Сейчас"))
         self.update()
 
     def change_theme(self, e):
@@ -117,15 +144,18 @@ class Middle(Row):
         self.handler()
 
     def crate_player(self, name):
-        self.player = PlayerInterface(name=name)
+        self.player:PlayerInterface = PlayerInterface(name=name)
 
-    def build_content(self, name, trigger: str = None):
+    @timer
+    def build_content(self, trigger: str = None, two_trigger:str = None):
         self.pause()
         self.controls[0].clean()
-        self.crate_player(name=name)
         try:
             if trigger:
-                data:list[dict] = asyncio.run(self.player.result_of_the_period(period=trigger))
+                if two_trigger:
+                    data:list[dict] = asyncio.run(self.player.result_of_the_two_period(period=trigger,period_now=two_trigger))
+                else:
+                    data:list[dict] = asyncio.run(self.player.result_of_the_period(period=trigger))
             else:
                 data:list[dict]= asyncio.run(self.player.results())
             val=data.pop(-1)
@@ -175,18 +205,22 @@ class Middle(Row):
     def pause(self,*args):
         self.page.controls[0].disabled = True
         self.page.navigation_bar.disabled = True
+        self.update()
         self.page.update()
     def page_start(self,*args):
         self.page.controls[0].disabled = False
         self.page.navigation_bar.disabled = False
         self.page.update()
     def period(self, period):
-        self.build_content(name=self.player.name, trigger=period)
-
+        self.build_content(trigger=period)
+    def two_period(self, period:tuple):
+        self.build_content(trigger=period[0],two_trigger=period[1])
+    def __build_content(self, name):
+        self.crate_player(name=name)
+        self.build_content()
     def change_update(self, e):
         if hasattr(self, "player"):
-            self.build_content(name=self.player.name)
-    @timer
+            self.build_content()
     def start(self,e):
         if hasattr(self, "player"):
             self.pause()
@@ -195,11 +229,12 @@ class Middle(Row):
 
     def handler(self):
         self.event.on("update", self.change_update)
-        self.event.on("text_button", self.build_content)
+        self.event.on("text_button", self.__build_content)
         self.event.on("period", self.period)
         self.event.on("start_session", self.start)
         self.event.on("pause", self.pause)
         self.event.on("start", self.page_start)
+        self.event.on("two_period", self.two_period)
 
 
 

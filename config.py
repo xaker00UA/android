@@ -14,3 +14,4 @@ DATABASE = config.get(
 SESSION = config.get("start_session", False)
 CLANS = config.get("clans", [])
 PLAYERS = config.get("players", [])
+FORMAT_DATE = "%d-%m-%Y %H:%M:%S"

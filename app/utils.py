@@ -4,7 +4,7 @@ from app.request import Request_player, Request_clan
 
 import time
 import asyncio
-from config import LIMITED
+from config import LIMITED, FORMAT_DATE
 from logging import getLogger, FileHandler, Formatter, INFO
 
 logger = getLogger(__name__)
@@ -12,7 +12,7 @@ handler = FileHandler(filename=f"log\\{__name__}.log", encoding="utf-8")
 handler.setFormatter(
     Formatter(
         "[%(asctime)s] [%(levelname)s] [%(name)s]-%(message)s",
-        datefmt="%d-%m-%Y %H:%M:%S",
+        datefmt=FORMAT_DATE,
     )
 )
 logger.addHandler(handler)
@@ -47,6 +47,7 @@ class PlayerInterface:
             return "Вас только начали отслеживать"
         else:
             self.time = old.get("data")
+            self.now_time = datetime.now().replace(microsecond=0)
             self.old_ses = old.get("all")
             self.now_ses = data["all"]
 
@@ -63,6 +64,17 @@ class PlayerInterface:
             i["all"] for i in All_General().get(self.name) if i["data"] == period
         )
         self.time = period
+        return self.calculate()
+
+    async def result_of_the_two_period(self, period: str, period_now: str):
+        self.old_ses = next(
+            i["all"] for i in All_General().get(self.name) if i["data"] == period
+        )
+        self.now_ses = next(
+            i["all"] for i in All_General().get(self.name) if i["data"] == period_now
+        )
+        self.time = period
+        self.now_time = datetime.strptime(period_now, FORMAT_DATE)
         return self.calculate()
 
     async def results(self):
@@ -91,8 +103,7 @@ class PlayerInterface:
             result.append(Stats.get_general())
             result.append(
                 {
-                    "time": datetime.now().replace(microsecond=0)
-                    - datetime.strptime(self.time, "%d-%m-%Y %H:%M:%S"),
+                    "time": self.now_time - datetime.strptime(self.time, FORMAT_DATE),
                     "name": self.name,
                 }
             )
@@ -138,6 +149,7 @@ class ClanInterface:
             self.time = old.get("data")
             self.old_ses = old.get("players")
             self.now_ses = data["players"]
+            self.now_time = datetime.now().replace(microsecond=0)
 
     async def reset(self):
         data = await self.clan.clan()
@@ -163,10 +175,25 @@ class ClanInterface:
         await self.update()
         self.old_ses = next(
             i.get("players")
-            for i in All_General().get_clan(self.name)
+            for i in All_General().get_clan(self.clan_tag)
             if i["data"] == period
         )
         self.time = period
+        return self.calculate()
+
+    async def result_of_the_two_period(self, period: str, period_now: str):
+        self.old_ses = next(
+            i.get("players")
+            for i in All_General().get_clan(self.clan_tag)
+            if i["data"] == period
+        )
+        self.now_ses = next(
+            i.get("players")
+            for i in All_General().get_clan(self.clan_tag)
+            if i["data"] == period_now
+        )
+        self.time = period
+        self.now_time = datetime.strptime(period_now, FORMAT_DATE)
         return self.calculate()
 
     async def results(self):
@@ -191,8 +218,7 @@ class ClanInterface:
             res.append(Stats.get_general())
             res.append(
                 {
-                    "time": datetime.now().replace(microsecond=0)
-                    - datetime.strptime(self.time, "%d-%m-%Y %H:%M:%S"),
+                    "time": self.now_time - datetime.strptime(self.time, FORMAT_DATE),
                     "name": self.clan_tag,
                 }
             )
